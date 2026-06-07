@@ -5,7 +5,7 @@ import {
   UserPlus, Users, Calendar, User, BookOpen, LogOut,
   CheckCircle, AlertCircle, ArrowLeft, LayoutDashboard,
   GraduationCap, TrendingUp, Clock, Search, Filter,
-  Edit2, Trash2, Mail, CreditCard
+  Edit2, Trash2, Mail, CreditCard, Coins
 } from 'lucide-react';
 import axios from 'axios';
 import Login from './pages/Login';
@@ -41,6 +41,7 @@ const Dashboard = () => {
   const [editingStudent, setEditingStudent] = useState(null);
   const [editingStaff, setEditingStaff] = useState(null);
   const [dashboardFees, setDashboardFees] = useState({});
+  const [selectedFeeStudent, setSelectedFeeStudent] = useState(null);
 
   useEffect(() => {
     fetchStudents();
@@ -50,11 +51,23 @@ const Dashboard = () => {
 
   const fetchDashboardFees = async () => {
     try {
-      const currentMonth = new Date().toISOString().substring(0, 7);
-      const res = await axios.get(`${API_URL}/api/fees?month=${currentMonth}`);
+      const res = await axios.get(`${API_URL}/api/fees`);
       const feesMap = {};
       res.data.forEach(fee => {
-        feesMap[fee.studentId] = fee.status;
+        const items = fee.items || [];
+        if (items.length === 0) {
+          feesMap[fee.studentId] = 'Unpaid';
+        } else {
+          const allPaid = items.every(item => item.status === 'Paid');
+          const allUnpaid = items.every(item => item.status === 'Unpaid');
+          if (allPaid) {
+            feesMap[fee.studentId] = 'Paid';
+          } else if (allUnpaid) {
+            feesMap[fee.studentId] = 'Unpaid';
+          } else {
+            feesMap[fee.studentId] = 'Partial';
+          }
+        }
       });
       setDashboardFees(feesMap);
     } catch (err) {
@@ -94,9 +107,9 @@ const Dashboard = () => {
     }
   };
 
-  const fetchFees = async (month, studentClass) => {
+  const fetchFees = async (studentClass) => {
     try {
-      const res = await axios.get(`${API_URL}/api/fees?month=${month}${studentClass ? `&studentClass=${studentClass}` : ''}`);
+      const res = await axios.get(`${API_URL}/api/fees${studentClass ? `?studentClass=${studentClass}` : ''}`);
       const records = res.data;
       let listStudents = studentClass ? students.filter(s => s.class === studentClass) : students;
       if (selectedStudent && !listStudents.find(s => String(s._id) === String(selectedStudent))) {
@@ -105,9 +118,22 @@ const Dashboard = () => {
       }
       setFeesList(listStudents.map(student => {
         const record = records.find(r => String(r.studentId) === String(student._id));
-        return { studentId: student._id, name: student.name, class: student.class, status: record ? record.status : 'Unpaid' };
+        const defaultItems = [
+          { name: 'Term 1 Fee', amount: 0, status: 'Unpaid' },
+          { name: 'Term 2 Fee', amount: 0, status: 'Unpaid' },
+          { name: 'Term 3 Fee', amount: 0, status: 'Unpaid' },
+          { name: 'Admission Fee', amount: 0, status: 'Unpaid' },
+          { name: 'Registration Fee', amount: 0, status: 'Unpaid' },
+          { name: 'Notebooks Fee', amount: 0, status: 'Unpaid' }
+        ];
+        return {
+          studentId: student._id,
+          name: student.name,
+          class: student.class,
+          items: record ? record.items : defaultItems
+        };
       }));
-    } catch (err) { console.error('Error fetching fees'); }
+    } catch (err) { console.error('Error fetching fees', err); }
   };
 
   const fetchAttendanceForDate = async (date, studentClass) => {
@@ -179,9 +205,9 @@ const Dashboard = () => {
       fetchAttendanceForDate(selectedDate, selectedClass);
     }
     if (view === 'fees-sheet') {
-      fetchFees(selectedFeeMonth, selectedClass);
+      fetchFees(selectedClass);
     }
-  }, [view, selectedDate, selectedClass, selectedFeeMonth, selectedStudent, students]);
+  }, [view, selectedDate, selectedClass, selectedStudent, students]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -582,11 +608,13 @@ const Dashboard = () => {
                               <div className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border" style={{ color: 'var(--secondary)', background: 'rgba(0,180,216,0.08)', borderColor: 'rgba(0,180,216,0.2)' }}>
                                 {student.class}
                               </div>
-                              {dashboardFees[student._id] && (
-                                <div className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-full border ${dashboardFees[student._id] === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
-                                  {dashboardFees[student._id]}
-                                </div>
-                              )}
+                              <div className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-full border ${
+                                (dashboardFees[student._id] || 'Unpaid') === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                                (dashboardFees[student._id] || 'Unpaid') === 'Partial' ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                                'bg-rose-50 text-rose-600 border-rose-200'
+                              }`}>
+                                {dashboardFees[student._id] || 'Unpaid'}
+                              </div>
                             </div>
                           </div>
 
@@ -896,14 +924,10 @@ const Dashboard = () => {
             <motion.div key="fees" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} className="glass-card p-6 md:p-12">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 md:mb-12">
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-1 md:mb-2 gradient-text-roster">Monthly Fee Registry</h2>
+                  <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-1 md:mb-2 gradient-text-roster">Student Fee Registry</h2>
                   <p className="text-slate-500 font-bold tracking-widest uppercase text-[10px]">LITTLE EXPLORERS 2024</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
-                  <div className="bg-white p-3.5 rounded-2xl border-2 border-slate-100 shadow-sm flex items-center gap-3 w-full sm:w-auto">
-                    <Calendar size={18} className="text-orange-500 shrink-0" />
-                    <input type="month" className="bg-transparent border-none font-black text-slate-700 focus:outline-none w-full" value={selectedFeeMonth} onChange={(e) => setSelectedFeeMonth(e.target.value)} />
-                  </div>
                   <select className="bg-white border-2 border-slate-100 p-3.5 rounded-2xl font-black text-slate-700 shadow-sm outline-none w-full sm:w-auto" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
                     <option value="">All Classes</option>
                     {[...new Set(students.map(s => s.class))].map(c => <option key={c} value={c}>{c}</option>)}
@@ -922,50 +946,395 @@ const Dashboard = () => {
                   </select>
                 </div>
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar pb-10">
-                {feesList.map((record, idx) => (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 30 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    transition={{ delay: idx * 0.08, type: "spring", stiffness: 100 }} 
-                    key={record.studentId} 
-                    className="relative overflow-hidden flex flex-col gap-4 p-5 md:p-7 rounded-3xl border-2 border-transparent bg-white cursor-default group shadow-md hover:shadow-2xl hover:shadow-secondary/15 transition-all duration-300"
-                    style={{ background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, #e0f7fa, #fce4ec) border-box' }}
-                  >
-                    {/* Top color strip */}
-                    <div className="absolute top-0 left-0 right-0 h-1 rounded-t-3xl" style={{ background: 'linear-gradient(90deg, var(--secondary), var(--primary), var(--accent))' }} />
-                    {/* Decorative corner blob */}
-                    <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-bl from-secondary/8 to-transparent rounded-bl-full pointer-events-none" />
+                {feesList.map((record, idx) => {
+                  const items = record.items || [];
+                  const total = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+                  const paid = items.reduce((s, i) => s + (i.status === 'Paid' ? (Number(i.amount) || 0) : 0), 0);
+                  const unpaid = total - paid;
+                  const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+                  
+                  const allPaid = items.length > 0 && items.every(item => item.status === 'Paid');
+                  const allUnpaid = items.length === 0 || items.every(item => item.status === 'Unpaid');
+                  const overallStatus = allPaid ? 'Paid' : allUnpaid ? 'Unpaid' : 'Partial';
 
-                    <div className="flex justify-between items-start relative z-10 mt-1">
-                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center font-black text-xl md:text-2xl text-white shadow-lg shrink-0" style={{ background: 'linear-gradient(135deg, var(--secondary), var(--primary))' }}>
-                        {idx + 1}
+                  return (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 30 }} 
+                      animate={{ opacity: 1, y: 0 }} 
+                      transition={{ delay: idx * 0.08, type: "spring", stiffness: 100 }} 
+                      key={record.studentId} 
+                      className="relative overflow-hidden flex flex-col gap-4 p-5 md:p-7 rounded-3xl border-2 border-transparent bg-white cursor-default group shadow-md hover:shadow-2xl hover:shadow-secondary/15 transition-all duration-300"
+                      style={{ background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, #e0f7fa, #fce4ec) border-box' }}
+                    >
+                      {/* Top color strip */}
+                      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-3xl" style={{ background: 'linear-gradient(90deg, var(--secondary), var(--primary), var(--accent))' }} />
+                      {/* Decorative corner blob */}
+                      <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-bl from-secondary/8 to-transparent rounded-bl-full pointer-events-none" />
+
+                      <div className="flex justify-between items-start relative z-10 mt-1">
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center font-black text-xl md:text-2xl text-white shadow-lg shrink-0" style={{ background: 'linear-gradient(135deg, var(--secondary), var(--primary))' }}>
+                          {idx + 1}
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-slate-100 bg-slate-50 text-slate-600">
+                            {record.class}
+                          </span>
+                          <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                            overallStatus === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                            overallStatus === 'Partial' ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                            'bg-rose-50 text-rose-600 border-rose-200'
+                          }`}>
+                            {overallStatus}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border" style={{ color: 'var(--secondary)', background: 'rgba(0,180,216,0.08)', borderColor: 'rgba(0,180,216,0.2)' }}>
-                        {record.class}
+
+                      <div className="relative z-10 flex-1">
+                        <h3 className="font-black text-slate-800 text-lg md:text-xl tracking-tight leading-tight mb-2">{record.name}</h3>
+                        
+                        <div className="mt-4 space-y-3 bg-slate-50/50 p-3.5 rounded-2xl border border-slate-100">
+                          <div className="flex justify-between text-xs font-bold text-slate-500">
+                            <span>Paid</span>
+                            <span className="text-emerald-600 font-black">${paid.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-xs font-bold text-slate-500">
+                            <span>Total Fees</span>
+                            <span className="text-slate-800 font-black">${total.toLocaleString()}</span>
+                          </div>
+
+                          <div className="space-y-1 pt-1.5 border-t border-slate-200/50">
+                            <div className="flex justify-between text-[10px] font-black text-slate-400">
+                              <span>Clearance</span>
+                              <span>{pct}%</span>
+                            </div>
+                            <div className="w-full h-2 bg-slate-200/50 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="relative z-10 flex-1">
-                      <div className="font-black text-slate-800 text-lg md:text-xl tracking-tight leading-tight mb-2">{record.name}</div>
-                    </div>
-
-                    {/* Always-visible action bar */}
-                    <div className="relative z-10 flex items-center gap-2 pt-2 border-t border-slate-100 mt-auto">
-                      {['Paid', 'Unpaid'].map(status => (
-                        <button key={status} onClick={async () => {
-                          try {
-                            const newList = [...feesList]; const localIdx = newList.findIndex(item => item.studentId === record.studentId);
-                            if (localIdx !== -1) { newList[localIdx].status = status; setFeesList(newList); }
-                            await axios.post(`${API_URL}/api/fees`, { month: selectedFeeMonth, feeData: [{ studentId: record.studentId, status }] });
-                            setMsg({ type: 'success', text: `${record.name} marked as ${status}` });
-                          } catch (err) { setMsg({ type: 'error', text: 'Update failed' }); }
-                        }} className={`flex-1 flex items-center justify-center py-2 rounded-xl text-[11px] font-black transition-all shadow-sm border ${record.status === status ? status === 'Paid' ? 'bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30' : 'bg-rose-500 text-white border-rose-500 hover:bg-rose-600 shadow-rose-500/30' : status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white' : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white'}`}>{status}</button>
-                      ))}
-                    </div>
-                  </motion.div>
-                ))}
+                      {/* Action Button */}
+                      <div className="relative z-10 flex items-center pt-2 border-t border-slate-100 mt-auto">
+                        <button 
+                          onClick={() => setSelectedFeeStudent(record)} 
+                          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black transition-all bg-secondary text-white hover:bg-secondary-hover hover:shadow-lg hover:shadow-secondary/20 shadow-md"
+                        >
+                          <CreditCard size={14} /> Manage Fee Details
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
+
+              {/* Manage Fee Details Modal */}
+              <AnimatePresence>
+                {selectedFeeStudent && (
+                  <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', background:'rgba(15,23,42,0.65)', backdropFilter:'blur(8px)' }}>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                      transition={{ type: 'spring', stiffness: 260, damping: 25 }}
+                      style={{
+                        background: '#ffffff', borderRadius: '28px', padding: '32px',
+                        width: '100%', maxWidth: '720px', boxShadow: '0 25px 60px rgba(0,0,0,0.2)',
+                        position: 'relative', maxHeight: '90vh', overflowY: 'auto',
+                        display: 'flex', flexDirection: 'column', gap: '20px'
+                      }}
+                    >
+                      {/* Close Button */}
+                      <button
+                        onClick={() => setSelectedFeeStudent(null)}
+                        style={{
+                          position: 'absolute', top: '20px', right: '20px',
+                          width: '36px', height: '36px', borderRadius: '10px',
+                          background: '#f1f5f9', border: 'none', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#64748b', boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+                        }}
+                      >
+                        <LogOut size={18} style={{ transform: 'rotate(45deg)' }} />
+                      </button>
+
+                      {/* Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingRight: '48px' }}>
+                        <div style={{
+                          width: '48px', height: '48px', borderRadius: '14px',
+                          background: '#fff7ed', display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', color: '#f97316', flexShrink: 0
+                        }}>
+                          <Coins size={24} />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#1e293b', margin: 0, lineHeight: 1.2 }}>
+                            {selectedFeeStudent.name}
+                          </h3>
+                          <p style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '4px 0 0' }}>
+                            Class: {selectedFeeStudent.class} &bull; Fee Breakdown
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Column Headers */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 4px' }}>
+                        <div style={{ flex: '1 1 0', fontSize: '0.65rem', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fee Item</div>
+                        <div style={{ width: '110px', flexShrink: 0, fontSize: '0.65rem', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Amount (₹)</div>
+                        <div style={{ width: '80px', flexShrink: 0, fontSize: '0.65rem', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Status</div>
+                        <div style={{ width: '36px', flexShrink: 0 }}></div>
+                      </div>
+
+                      {/* Fee Items List */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '35vh', overflowY: 'auto', paddingRight: '4px' }}>
+                        {selectedFeeStudent.items.map((item, idx) => {
+                          const isDefaultItem = ['Term 1 Fee', 'Term 2 Fee', 'Term 3 Fee', 'Admission Fee', 'Registration Fee', 'Notebooks Fee'].includes(item.name);
+                          return (
+                            <div key={idx} style={{
+                              display: 'flex', alignItems: 'center', gap: '10px',
+                              padding: '12px 14px', background: '#f8fafc',
+                              border: '1.5px solid #e2e8f0', borderRadius: '14px'
+                            }}>
+                              {/* Name */}
+                              <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                                {isDefaultItem ? (
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>{item.name}</span>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={item.name}
+                                    onChange={(e) => {
+                                      const u = [...selectedFeeStudent.items];
+                                      u[idx].name = e.target.value;
+                                      setSelectedFeeStudent({ ...selectedFeeStudent, items: u });
+                                    }}
+                                    style={{
+                                      fontSize: '0.85rem', fontWeight: 700, color: '#334155',
+                                      background: 'transparent', border: 'none',
+                                      borderBottom: '2px solid #cbd5e1', outline: 'none',
+                                      width: '100%', padding: '2px 0'
+                                    }}
+                                  />
+                                )}
+                              </div>
+
+                              {/* Amount */}
+                              <div style={{ width: '110px', flexShrink: 0, position: 'relative' }}>
+                                <span style={{
+                                  position: 'absolute', left: '10px', top: '50%',
+                                  transform: 'translateY(-50%)', fontSize: '0.75rem',
+                                  fontWeight: 700, color: '#94a3b8'
+                                }}>₹</span>
+                                <input
+                                  type="number"
+                                  value={item.amount || ''}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    const u = [...selectedFeeStudent.items];
+                                    u[idx].amount = val;
+                                    setSelectedFeeStudent({ ...selectedFeeStudent, items: u });
+                                  }}
+                                  placeholder="0"
+                                  style={{
+                                    width: '100%', paddingLeft: '26px', paddingRight: '8px',
+                                    paddingTop: '8px', paddingBottom: '8px',
+                                    fontSize: '0.8rem', fontWeight: 700, color: '#334155',
+                                    background: '#ffffff', border: '1.5px solid #e2e8f0',
+                                    borderRadius: '10px', outline: 'none', boxSizing: 'border-box'
+                                  }}
+                                />
+                              </div>
+
+                              {/* Status Toggle */}
+                              <button
+                                onClick={() => {
+                                  const u = [...selectedFeeStudent.items];
+                                  u[idx].status = item.status === 'Paid' ? 'Unpaid' : 'Paid';
+                                  setSelectedFeeStudent({ ...selectedFeeStudent, items: u });
+                                }}
+                                style={{
+                                  width: '80px', flexShrink: 0, padding: '8px 0',
+                                  borderRadius: '10px', fontSize: '0.72rem', fontWeight: 900,
+                                  cursor: 'pointer', border: 'none', textAlign: 'center',
+                                  background: item.status === 'Paid' ? '#10b981' : '#f43f5e',
+                                  color: '#ffffff',
+                                  boxShadow: item.status === 'Paid'
+                                    ? '0 2px 8px rgba(16,185,129,0.4)'
+                                    : '0 2px 8px rgba(244,63,94,0.4)'
+                                }}
+                              >
+                                {item.status}
+                              </button>
+
+                              {/* Delete (custom only) */}
+                              {!isDefaultItem ? (
+                                <button
+                                  onClick={() => {
+                                    const u = selectedFeeStudent.items.filter((_, i) => i !== idx);
+                                    setSelectedFeeStudent({ ...selectedFeeStudent, items: u });
+                                  }}
+                                  style={{
+                                    width: '36px', height: '36px', flexShrink: 0,
+                                    borderRadius: '10px', border: 'none', cursor: 'pointer',
+                                    background: '#f43f5e', color: '#ffffff',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 2px 8px rgba(244,63,94,0.35)'
+                                  }}
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              ) : (
+                                <div style={{ width: '36px', flexShrink: 0 }} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Add Custom Item */}
+                      <div style={{
+                        padding: '16px', background: '#fff7ed',
+                        border: '1.5px solid #fed7aa', borderRadius: '16px'
+                      }}>
+                        <div style={{
+                          fontSize: '0.65rem', fontWeight: 900, color: '#ea580c',
+                          textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px'
+                        }}>+ Add Custom Fee Item</div>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                          <input
+                            type="text"
+                            placeholder="e.g. Uniform Fee, Exam Fee"
+                            id="new-item-name"
+                            style={{
+                              flex: '1 1 150px', padding: '10px 14px', fontSize: '0.8rem',
+                              fontWeight: 700, color: '#334155', background: '#ffffff',
+                              border: '1.5px solid #e2e8f0', borderRadius: '10px', outline: 'none'
+                            }}
+                          />
+                          <input
+                            type="number"
+                            placeholder="Amount"
+                            id="new-item-amount"
+                            style={{
+                              width: '110px', flexShrink: 0, padding: '10px 14px', fontSize: '0.8rem',
+                              fontWeight: 700, color: '#334155', background: '#ffffff',
+                              border: '1.5px solid #e2e8f0', borderRadius: '10px', outline: 'none'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nIn = document.getElementById('new-item-name');
+                              const aIn = document.getElementById('new-item-amount');
+                              const name = nIn.value.trim();
+                              const amount = parseFloat(aIn.value) || 0;
+                              if (!name) return;
+                              const u = [...selectedFeeStudent.items, { name, amount, status: 'Unpaid' }];
+                              setSelectedFeeStudent({ ...selectedFeeStudent, items: u });
+                              nIn.value = ''; aIn.value = '';
+                            }}
+                            style={{
+                              padding: '10px 20px', background: '#f97316', color: '#ffffff',
+                              border: 'none', borderRadius: '10px', fontSize: '0.8rem',
+                              fontWeight: 900, cursor: 'pointer', flexShrink: 0,
+                              boxShadow: '0 2px 8px rgba(249,115,22,0.4)'
+                            }}
+                          >
+                            Add Item
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Totals + Progress + Save */}
+                      {(() => {
+                        const total = selectedFeeStudent.items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+                        const paid  = selectedFeeStudent.items.reduce((s, i) => s + (i.status === 'Paid' ? (Number(i.amount) || 0) : 0), 0);
+                        const unpaid = total - paid;
+                        const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {/* Stats */}
+                            <div style={{
+                              display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+                              background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                              borderRadius: '18px', padding: '20px',
+                              boxShadow: '0 8px 24px rgba(99,102,241,0.3)'
+                            }}>
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'rgba(199,210,254,0.85)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>Total Fees</div>
+                                <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#fff' }}>₹{total.toLocaleString()}</div>
+                              </div>
+                              <div style={{ textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.15)', borderRight: '1px solid rgba(255,255,255,0.15)' }}>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'rgba(199,210,254,0.85)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>Total Paid</div>
+                                <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#6ee7b7' }}>₹{paid.toLocaleString()}</div>
+                              </div>
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'rgba(199,210,254,0.85)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>Pending</div>
+                                <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#fca5a5' }}>₹{unpaid.toLocaleString()}</div>
+                              </div>
+                            </div>
+
+                            {/* Progress */}
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '6px' }}>
+                                <span>Fee Clearance</span>
+                                <span style={{ fontWeight: 900, color: pct === 100 ? '#10b981' : '#334155' }}>{pct}%</span>
+                              </div>
+                              <div style={{ width: '100%', height: '10px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+                                <div style={{
+                                  height: '100%', borderRadius: '999px',
+                                  background: pct === 100 ? '#10b981' : 'linear-gradient(90deg,#6366f1,#10b981)',
+                                  width: `${pct}%`, transition: 'width 0.5s ease'
+                                }} />
+                              </div>
+                            </div>
+
+                            {/* Buttons */}
+                            <div style={{ display: 'flex', gap: '12px', paddingTop: '14px', borderTop: '1.5px solid #f1f5f9' }}>
+                              <button
+                                onClick={() => setSelectedFeeStudent(null)}
+                                style={{
+                                  flex: 1, padding: '13px', background: '#f1f5f9',
+                                  color: '#475569', border: 'none', borderRadius: '12px',
+                                  fontSize: '0.82rem', fontWeight: 900, cursor: 'pointer'
+                                }}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await axios.post(`${API_URL}/api/fees`, {
+                                      studentId: selectedFeeStudent.studentId,
+                                      items: selectedFeeStudent.items
+                                    });
+                                    setMsg({ type: 'success', text: `Fees for ${selectedFeeStudent.name} saved!` });
+                                    setSelectedFeeStudent(null);
+                                    fetchFees(selectedClass);
+                                    fetchDashboardFees();
+                                  } catch (err) {
+                                    setMsg({ type: 'error', text: 'Update failed' });
+                                  }
+                                }}
+                                style={{
+                                  flex: 1, padding: '13px', background: '#10b981',
+                                  color: '#ffffff', border: 'none', borderRadius: '12px',
+                                  fontSize: '0.82rem', fontWeight: 900, cursor: 'pointer',
+                                  boxShadow: '0 4px 14px rgba(16,185,129,0.4)'
+                                }}
+                              >
+                                💾 Save Details
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
             </motion.div>
           ) : view === 'attendance-calendar' ? (
             <motion.div

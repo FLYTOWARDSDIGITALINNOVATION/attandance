@@ -74,11 +74,15 @@ const staffAttendanceSchema = new mongoose.Schema({
 const StaffAttendance = mongoose.model('StaffAttendance', staffAttendanceSchema);
 
 const feeSchema = new mongoose.Schema({
-  month: { type: String, required: true }, // YYYY-MM
-  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
-  status: { type: String, enum: ['Paid', 'Unpaid'], default: 'Unpaid' }
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true, unique: true },
+  items: [
+    {
+      name: { type: String, required: true },
+      amount: { type: Number, required: true, default: 0 },
+      status: { type: String, enum: ['Paid', 'Unpaid'], default: 'Unpaid' }
+    }
+  ]
 }, { timestamps: true });
-feeSchema.index({ month: 1, studentId: 1 }, { unique: true });
 
 const Fee = mongoose.model('Fee', feeSchema);
 
@@ -364,10 +368,12 @@ app.get('/api/staff-attendance/summary', async (req, res) => {
 
 // --- Fees Logic ---
 app.get('/api/fees', async (req, res) => {
-  const { month, studentClass } = req.query;
+  const { studentClass, studentId } = req.query;
   try {
-    let query = { month };
-    if (studentClass) {
+    let query = {};
+    if (studentId) {
+      query.studentId = studentId;
+    } else if (studentClass) {
       // Find student IDs in the given class, then filter fees
       const classStudents = await Student.find({ class: studentClass }).select('_id');
       const studentIds = classStudents.map(s => s._id);
@@ -382,24 +388,20 @@ app.get('/api/fees', async (req, res) => {
 });
 
 app.post('/api/fees', async (req, res) => {
-  const { month, feeData } = req.body;
+  const { studentId, items } = req.body;
   try {
-    const ops = feeData.map(item => ({
-      updateOne: {
-        filter: { month, studentId: item.studentId },
-        update: { $set: { status: item.status } },
-        upsert: true
-      }
-    }));
-    await Fee.bulkWrite(ops);
-    res.json({ message: 'Fee status updated successfully' });
+    const feeRecord = await Fee.findOneAndUpdate(
+      { studentId },
+      { items },
+      { new: true, upsert: true }
+    );
+    res.json({ message: 'Fee details updated successfully', data: feeRecord });
   } catch (err) {
     console.error('Fees Save Error:', err);
     res.status(500).send('Server error: ' + err.message);
   }
 });
 
-// Root route
 app.get('/', (req, res) => {
   res.send('Attendance API is running...');
 });
