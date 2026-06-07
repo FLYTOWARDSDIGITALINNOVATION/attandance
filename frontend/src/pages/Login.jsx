@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { LogIn, Mail, Lock, GraduationCap, School, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = `http://${window.location.hostname}:5004`;
+const API_URL = window.location.protocol === 'https:'
+  ? `https://${window.location.hostname}`
+  : `http://${window.location.hostname}:5004`;
 
 const Login = () => {
   const [email, setEmail] = useState('');

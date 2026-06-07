@@ -10,7 +10,9 @@ import {
 import axios from 'axios';
 import Login from './pages/Login';
 
-const API_URL = `http://${window.location.hostname}:5004`;
+const API_URL = window.location.protocol === 'https:'
+  ? `https://${window.location.hostname}`
+  : `http://${window.location.hostname}:5004`;
 
 const Dashboard = () => {
   const user = JSON.parse(localStorage.getItem('user'));
