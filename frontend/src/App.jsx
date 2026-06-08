@@ -1146,7 +1146,7 @@ const Dashboard = () => {
                       </div>
 
                       {/* Column Headers */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 4px' }}>
+                      <div className="fee-modal-column-header" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 4px' }}>
                         <div style={{ flex: '1 1 0', fontSize: '0.65rem', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fee Item</div>
                         <div style={{ width: '110px', flexShrink: 0, fontSize: '0.65rem', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Amount (₹)</div>
                         <div style={{ width: '80px', flexShrink: 0, fontSize: '0.65rem', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Status</div>
@@ -1158,13 +1158,13 @@ const Dashboard = () => {
                         {selectedFeeStudent.items.map((item, idx) => {
                           const isDefaultItem = ['Term 1 Fee', 'Term 2 Fee', 'Term 3 Fee', 'Admission Fee', 'Registration Fee', 'Notebooks Fee'].includes(item.name);
                           return (
-                            <div key={idx} style={{
+                            <div key={idx} className="fee-item-row" style={{
                               display: 'flex', alignItems: 'center', gap: '10px',
                               padding: '12px 14px', background: '#f8fafc',
                               border: '1.5px solid #e2e8f0', borderRadius: '14px'
                             }}>
                               {/* Name */}
-                              <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                              <div className="fee-item-name" style={{ flex: '1 1 0', minWidth: 0 }}>
                                 {isDefaultItem ? (
                                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>{item.name}</span>
                                 ) : (
@@ -1187,7 +1187,7 @@ const Dashboard = () => {
                               </div>
 
                               {/* Amount */}
-                              <div style={{ width: '110px', flexShrink: 0, position: 'relative' }}>
+                              <div className="fee-item-amount" style={{ width: '110px', flexShrink: 0, position: 'relative' }}>
                                 <span style={{
                                   position: 'absolute', left: '10px', top: '50%',
                                   transform: 'translateY(-50%)', fontSize: '0.75rem',
@@ -1215,6 +1215,7 @@ const Dashboard = () => {
 
                               {/* Status Toggle */}
                               <button
+                                className="fee-item-status"
                                 onClick={() => {
                                   const u = [...selectedFeeStudent.items];
                                   u[idx].status = item.status === 'Paid' ? 'Unpaid' : 'Paid';
@@ -1237,6 +1238,7 @@ const Dashboard = () => {
                               {/* Delete (custom only) */}
                               {!isDefaultItem ? (
                                 <button
+                                  className="fee-item-delete"
                                   onClick={() => {
                                     const u = selectedFeeStudent.items.filter((_, i) => i !== idx);
                                     setSelectedFeeStudent({ ...selectedFeeStudent, items: u });
@@ -1252,7 +1254,7 @@ const Dashboard = () => {
                                   <Trash2 size={15} />
                                 </button>
                               ) : (
-                                <div style={{ width: '36px', flexShrink: 0 }} />
+                                <div className="fee-item-delete-placeholder" style={{ width: '36px', flexShrink: 0 }} />
                               )}
                             </div>
                           );
