@@ -9,12 +9,9 @@ async function check() {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to MongoDB');
     
-    const Student = mongoose.model('Student', new mongoose.Schema({}, { strict: false }));
-    const count = await Student.countDocuments();
-    console.log(`Total Students in DB: ${count}`);
-    
-    const all = await Student.find().limit(5);
-    console.log('Sample Students:', JSON.stringify(all, null, 2));
+    const Admin = mongoose.model('Admin', new mongoose.Schema({}, { strict: false, collection: 'admins' }));
+    const all = await Admin.find();
+    console.log('Admins:', JSON.stringify(all, null, 2));
     
     process.exit(0);
   } catch (err) {
@@ -24,3 +21,7 @@ async function check() {
 }
 
 check();
+
+
+
+

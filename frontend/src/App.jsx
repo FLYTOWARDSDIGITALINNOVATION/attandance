@@ -363,7 +363,7 @@ const Dashboard = () => {
               <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
             </motion.div>
             <div>
-              <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-2 md:mb-3 font-clean" style={{ background: 'linear-gradient(135deg, #ff4d6d, #ffb703, #00b4d8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Little Explorers</h1>
+              <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-2 md:mb-3 font-clean" style={{ background: 'linear-gradient(135deg, #ff4d6d, #ffb703, #00b4d8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Sriram First Steps</h1>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setActiveTab('students')}
@@ -546,7 +546,7 @@ const Dashboard = () => {
                 <div className="flex items-center gap-4 md:gap-6">
                   <h2 className="text-2xl md:text-3xl font-black tracking-tighter gradient-text-roster">Current Roster</h2>
                   <span className="px-6 py-2.5 bg-accent/10 text-accent text-[12px] font-black uppercase tracking-widest rounded-2xl border-2 border-accent/20">
-                    {activeTab === 'students' ? 'Little Explorers' : 'Master Guides'}
+                    {activeTab === 'students' ? 'Sriram First Steps' : 'Master Guides'}
                   </span>
                 </div>
 
@@ -943,7 +943,7 @@ const Dashboard = () => {
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
                 <div>
                   <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-1 md:mb-2 gradient-text-roster">Student Fee Registry</h2>
-                  <p className="text-slate-500 font-bold tracking-widest uppercase text-[10px]">LITTLE EXPLORERS · Batch-wise View</p>
+                  <p className="text-slate-500 font-bold tracking-widest uppercase text-[10px]">SRIRAM FIRST STEPS · Batch-wise View</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
                   <select className="bg-white border-2 border-slate-100 p-3.5 rounded-2xl font-black text-slate-700 shadow-sm outline-none w-full sm:w-auto" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
