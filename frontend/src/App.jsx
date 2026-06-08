@@ -29,6 +29,7 @@ const Dashboard = () => {
   const [attendanceList, setAttendanceList] = useState([]);
   const [formData, setFormData] = useState({
     name: '', dob: '', gender: '', studentClass: '',
+    admissionYear: '',
     fatherName: '', motherName: '', fatherOccupation: '', motherOccupation: '',
     address: '', phoneNumber: '', age: ''
   });
@@ -42,6 +43,7 @@ const Dashboard = () => {
   const [editingStaff, setEditingStaff] = useState(null);
   const [dashboardFees, setDashboardFees] = useState({});
   const [selectedFeeStudent, setSelectedFeeStudent] = useState(null);
+  const [selectedBatch, setSelectedBatch] = useState('all');
 
   useEffect(() => {
     fetchStudents();
@@ -130,6 +132,7 @@ const Dashboard = () => {
           studentId: student._id,
           name: student.name,
           class: student.class,
+          admissionYear: student.admissionYear || '',
           items: record ? record.items : defaultItems
         };
       }));
@@ -230,6 +233,7 @@ const Dashboard = () => {
         }
         setFormData({
           name: '', dob: '', gender: '', studentClass: '',
+          admissionYear: '',
           fatherName: '', motherName: '', fatherOccupation: '', motherOccupation: '',
           address: '', phoneNumber: '', age: ''
         });
@@ -263,6 +267,7 @@ const Dashboard = () => {
         dob: item.dob,
         gender: item.gender,
         studentClass: item.class,
+        admissionYear: item.admissionYear || '',
         fatherName: item.fatherName || '',
         motherName: item.motherName || '',
         fatherOccupation: item.fatherOccupation || '',
@@ -846,6 +851,18 @@ const Dashboard = () => {
                           <textarea className="input-field py-3.5 pl-11 pr-4 text-sm min-h-[90px] font-clean" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} placeholder="Full Address" />
                         </div>
                       </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-[0.25em] ml-1 font-clean" style={{ color: 'var(--accent)' }}>Academic Year (Batch)</label>
+                        <div className="input-container">
+                          <GraduationCap size={17} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-70" style={{ color: 'var(--accent)' }} />
+                          <input
+                            className="input-field py-3.5 pl-11 pr-4 text-sm font-clean"
+                            value={formData.admissionYear}
+                            onChange={e => setFormData({ ...formData, admissionYear: e.target.value })}
+                            placeholder="e.g. 2026-27"
+                          />
+                        </div>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -922,10 +939,11 @@ const Dashboard = () => {
             </motion.div>
           ) : view === 'fees-sheet' ? (
             <motion.div key="fees" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} className="glass-card p-6 md:p-12">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 md:mb-12">
+              {/* Header */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
                 <div>
                   <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-1 md:mb-2 gradient-text-roster">Student Fee Registry</h2>
-                  <p className="text-slate-500 font-bold tracking-widest uppercase text-[10px]">LITTLE EXPLORERS 2024</p>
+                  <p className="text-slate-500 font-bold tracking-widest uppercase text-[10px]">LITTLE EXPLORERS · Batch-wise View</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
                   <select className="bg-white border-2 border-slate-100 p-3.5 rounded-2xl font-black text-slate-700 shadow-sm outline-none w-full sm:w-auto" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
@@ -947,8 +965,55 @@ const Dashboard = () => {
                 </div>
               </div>
 
+              {/* Batch Filter Tabs */}
+              {(() => {
+                const now = new Date();
+                const y = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
+                const currentBatch = `${y}-${String(y + 1).slice(-2)}`;
+                const nextBatch = `${y + 1}-${String(y + 2).slice(-2)}`;
+                const allBatches = [...new Set(students.map(s => s.admissionYear).filter(Boolean))].sort().reverse();
+                const oldBatches = allBatches.filter(b => b !== currentBatch && b !== nextBatch);
+
+                const batchTabs = [
+                  { key: 'all', label: '🎓 All Batches', color: '#6366f1' },
+                  { key: currentBatch, label: `⭐ ${currentBatch} (Current)`, color: '#10b981' },
+                  { key: nextBatch, label: `🌱 ${nextBatch} (Next Year)`, color: '#f97316' },
+                  ...oldBatches.map(b => ({ key: b, label: `📁 ${b}`, color: '#94a3b8' })),
+                ];
+
+                return (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
+                    {batchTabs.map(tab => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setSelectedBatch(tab.key)}
+                        style={{
+                          padding: '8px 16px', borderRadius: '999px',
+                          fontSize: '0.72rem', fontWeight: 900, cursor: 'pointer',
+                          border: selectedBatch === tab.key ? 'none' : `2px solid ${tab.color}30`,
+                          background: selectedBatch === tab.key ? tab.color : `${tab.color}10`,
+                          color: selectedBatch === tab.key ? '#ffffff' : tab.color,
+                          boxShadow: selectedBatch === tab.key ? `0 2px 12px ${tab.color}40` : 'none',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar pb-10">
-                {feesList.map((record, idx) => {
+                {feesList.filter(record => {
+                  const now = new Date();
+                  const y = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
+                  const currentBatch = `${y}-${String(y + 1).slice(-2)}`;
+                  // students with no admissionYear default to current batch
+                  const recordBatch = record.admissionYear || currentBatch;
+                  if (selectedBatch === 'all') return true;
+                  return recordBatch === selectedBatch;
+                }).map((record, idx) => {
                   const items = record.items || [];
                   const total = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
                   const paid = items.reduce((s, i) => s + (i.status === 'Paid' ? (Number(i.amount) || 0) : 0), 0);
@@ -1020,7 +1085,8 @@ const Dashboard = () => {
                       <div className="relative z-10 flex items-center pt-2 border-t border-slate-100 mt-auto">
                         <button 
                           onClick={() => setSelectedFeeStudent(record)} 
-                          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black transition-all bg-secondary text-white hover:bg-secondary-hover hover:shadow-lg hover:shadow-secondary/20 shadow-md"
+                          style={{ backgroundColor: 'var(--secondary)', color: '#fff', boxShadow: '0 4px 12px rgba(0,180,216,0.35)' }}
+                          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black transition-all shadow-md"
                         >
                           <CreditCard size={14} /> Manage Fee Details
                         </button>

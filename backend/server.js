@@ -32,6 +32,7 @@ const studentSchema = new mongoose.Schema({
   dob: { type: String, required: true },
   gender: { type: String, required: true },
   class: { type: String, required: true },
+  admissionYear: { type: String, default: '' },
   fatherName: String,
   motherName: String,
   fatherOccupation: String,
@@ -146,10 +147,10 @@ app.post('/api/auth/login', async (req, res) => {
 // --- Student Logic ---
 app.post('/api/students', async (req, res) => {
   console.log('Student Registration Request:', req.body);
-  const { name, dob, gender, studentClass, fatherName, motherName, fatherOccupation, motherOccupation, address, phoneNumber, age } = req.body;
+  const { name, dob, gender, studentClass, admissionYear, fatherName, motherName, fatherOccupation, motherOccupation, address, phoneNumber, age } = req.body;
   try {
     const student = new Student({ 
-      name, dob, gender, class: studentClass, 
+      name, dob, gender, class: studentClass, admissionYear: admissionYear || '',
       fatherName, motherName, fatherOccupation, motherOccupation, 
       address, phoneNumber, age 
     });
@@ -172,12 +173,12 @@ app.get('/api/students', async (req, res) => {
 });
 
 app.put('/api/students/:id', async (req, res) => {
-  const { name, dob, gender, studentClass, fatherName, motherName, fatherOccupation, motherOccupation, address, phoneNumber, age } = req.body;
+  const { name, dob, gender, studentClass, admissionYear, fatherName, motherName, fatherOccupation, motherOccupation, address, phoneNumber, age } = req.body;
   try {
     const student = await Student.findByIdAndUpdate(
       req.params.id,
       { 
-        name, dob, gender, class: studentClass,
+        name, dob, gender, class: studentClass, admissionYear: admissionYear || '',
         fatherName, motherName, fatherOccupation, motherOccupation,
         address, phoneNumber, age
       },
