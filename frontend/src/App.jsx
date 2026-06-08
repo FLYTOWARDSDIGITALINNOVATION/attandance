@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UserPlus, Users, Calendar, User, BookOpen, LogOut,
@@ -1097,14 +1098,16 @@ const Dashboard = () => {
               </div>
 
               {/* Manage Fee Details Modal */}
-              <AnimatePresence>
+              {createPortal(
+                <AnimatePresence>
                 {selectedFeeStudent && (
-                  <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', background:'rgba(15,23,42,0.65)', backdropFilter:'blur(8px)' }}>
+                  <div className="fee-modal-backdrop" style={{ position:'fixed', inset:0, zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', background:'rgba(15,23,42,0.65)', backdropFilter:'blur(8px)' }}>
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95, y: 20 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: 20 }}
                       transition={{ type: 'spring', stiffness: 260, damping: 25 }}
+                      className="fee-modal-panel"
                       style={{
                         background: '#ffffff', borderRadius: '28px', padding: '32px',
                         width: '100%', maxWidth: '720px', boxShadow: '0 25px 60px rgba(0,0,0,0.2)',
@@ -1402,7 +1405,9 @@ const Dashboard = () => {
                     </motion.div>
                   </div>
                 )}
-              </AnimatePresence>
+                </AnimatePresence>,
+                document.body
+              )}
             </motion.div>
           ) : view === 'attendance-calendar' ? (
             <motion.div

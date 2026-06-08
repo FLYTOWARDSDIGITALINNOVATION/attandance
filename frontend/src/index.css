@@ -1724,6 +1724,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 @media (max-width: 640px) {
+  .fee-modal-backdrop {
+    align-items: flex-start !important;
+    height: 100dvh;
+    overflow: hidden;
+    padding: 10px !important;
+  }
+
+  .fee-modal-panel {
+    max-height: calc(100dvh - 20px) !important;
+    padding: 24px !important;
+  }
+
   .fee-modal-column-header {
     display: none !important;
   }
@@ -1764,6 +1776,5 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     width: 32px !important;
   }
 }
-
 
 
